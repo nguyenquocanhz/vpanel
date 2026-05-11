@@ -38,13 +38,42 @@ def _get_root_device() -> str:
 
 def list_disks() -> list:
     """List all disk devices with partitions (lsblk JSON output)."""
+    # Try with full columns first
     result = _run_cmd(["lsblk", "-J", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,RO,RM"])
-    if result["success"]:
+    if result["success"] and result["stdout"]:
+        try:
+            data = json.loads(result["stdout"])
+            devices = data.get("blockdevices", [])
+            if devices:
+                return devices
+        except json.JSONDecodeError:
+            pass
+
+    # Fallback: fewer columns (some systems don't support MODEL)
+    result = _run_cmd(["lsblk", "-J", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT"])
+    if result["success"] and result["stdout"]:
         try:
             data = json.loads(result["stdout"])
             return data.get("blockdevices", [])
         except json.JSONDecodeError:
             pass
+
+    # Last fallback: parse text output
+    result = _run_cmd(["lsblk", "-l", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT"])
+    if result["success"] and result["stdout"]:
+        lines = result["stdout"].strip().split("\n")
+        devices = []
+        for line in lines[1:]:  # Skip header
+            parts = line.split()
+            if len(parts) >= 3:
+                devices.append({
+                    "name": parts[0],
+                    "size": parts[1] if len(parts) > 1 else "—",
+                    "type": parts[2] if len(parts) > 2 else "—",
+                    "fstype": parts[3] if len(parts) > 3 else None,
+                    "mountpoint": parts[4] if len(parts) > 4 else None,
+                })
+        return devices
     return []
 
 
