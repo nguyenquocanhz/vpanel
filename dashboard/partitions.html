@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — Partitions</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h2 class="flex items-center gap-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+                    Disk & Partitions
+                </h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary btn-sm" onclick="loadDisks()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    Refresh
+                </button>
+            </div>
+        </header>
+        <div class="page-content">
+            <div class="grid-auto" id="diskContainer"><div class="glass p-3 skeleton" style="height:200px"></div></div>
+            <div class="modal-overlay" id="createModal">
+                <div class="modal">
+                    <div class="modal-title">Create Partition</div>
+                    <div class="input-group"><label>Device</label><input class="input" id="cpDevice" placeholder="/dev/sdb"></div>
+                    <div class="flex gap-md">
+                        <div class="input-group" style="flex:1"><label>Start</label><input class="input" id="cpStart" value="1MiB"></div>
+                        <div class="input-group" style="flex:1"><label>End</label><input class="input" id="cpEnd" value="100%"></div>
+                    </div>
+                    <div class="input-group"><label>Filesystem</label>
+                        <select class="input" id="cpFs"><option>ext4</option><option>xfs</option><option>btrfs</option><option>swap</option></select>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-ghost" onclick="closeModal('createModal')">Cancel</button>
+                        <button class="btn btn-primary" onclick="createPartition()">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+function showToast(m,t='success'){const c=document.getElementById('toastContainer');if(!c)return;const d=document.createElement('div');d.className='toast '+t;d.innerHTML=`<span>${t==='error'?'❌':'✅'}</span><span>${m}</span>`;c.appendChild(d);setTimeout(()=>d.remove(),4000);}
+function closeModal(id){document.getElementById(id)?.classList.remove('active');}
+
+async function loadDisks(){
+    const c=document.getElementById('diskContainer');
+    try{
+        const r=await Auth.apiFetch('/api/manager/partitions');
+        if(!r)return; const d=await r.json();
+        if(!d.disks||!d.disks.length){c.innerHTML='<div class="glass p-3"><p class="text-muted">No block devices found</p></div>';return;}
+        c.innerHTML=d.disks.map(disk=>{
+            const children=disk.children||[];
+            return `<div class="glass p-3 animate-in">
+                <div class="flex items-center justify-between mb-2">
+                    <div><h3>${disk.name}</h3><span class="text-xs text-muted">${disk.size||'--'} • ${disk.model||'Unknown'}</span></div>
+                    <span class="badge badge-cyan">${disk.type||'disk'}</span>
+                </div>
+                <div class="table-container"><table><thead><tr><th>Partition</th><th>Size</th><th>Type</th><th>Mount</th><th>Actions</th></tr></thead>
+                <tbody>${children.length?children.map(p=>`<tr>
+                    <td>${p.name}</td><td>${p.size||'--'}</td><td>${p.fstype||'--'}</td><td>${p.mountpoint||'--'}</td>
+                    <td>${p.mountpoint?`<button class="btn btn-sm btn-ghost" onclick="unmountPart('${p.mountpoint}')">Unmount</button>`:'<button class="btn btn-sm btn-ghost" onclick="promptMount(\''+p.name+'\')">Mount</button>'}</td>
+                </tr>`).join(''):'<tr><td colspan="5" class="text-muted">No partitions</td></tr>'}</tbody></table></div>
+            </div>`;
+        }).join('');
+    }catch(e){c.innerHTML='<div class="glass p-3"><p class="text-muted">Failed: '+e.message+'</p></div>';}
+}
+
+async function createPartition(){
+    const device=document.getElementById('cpDevice').value,start=document.getElementById('cpStart').value,end=document.getElementById('cpEnd').value,fs_type=document.getElementById('cpFs').value;
+    if(!device){showToast('Device required','error');return;}
+    try{const r=await Auth.apiFetch('/api/manager/partition/create',{method:'POST',body:JSON.stringify({device,start,end,fs_type})});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');closeModal('createModal');loadDisks();}catch(e){showToast(e.message,'error');}
+}
+
+async function unmountPart(mp){if(!confirm('Unmount '+mp+'?'))return;
+    try{const r=await Auth.apiFetch('/api/manager/partition/unmount?mount_point='+encodeURIComponent(mp),{method:'POST'});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');loadDisks();}catch(e){showToast(e.message,'error');}
+}
+
+function promptMount(name){const mp=prompt('Enter mount point:');if(!mp)return;
+    Auth.apiFetch('/api/manager/partition/mount',{method:'POST',body:JSON.stringify({partition:'/dev/'+name,mount_point:mp})})
+    .then(r=>r.json()).then(d=>{showToast(d.message||d.error,d.success?'success':'error');loadDisks();}).catch(e=>showToast(e.message,'error'));}
+
+document.addEventListener('DOMContentLoaded',loadDisks);
+</script>
+</body>
+</html>

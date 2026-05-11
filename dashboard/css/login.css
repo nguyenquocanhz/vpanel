@@ -1,0 +1,99 @@
+/* ══════════════════════════════════════════
+   VPS Panel - Login Page Styles
+   ══════════════════════════════════════════ */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+/* Animated Background */
+.login-bg {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0;
+}
+.login-bg .orb {
+  position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3;
+  animation: float 8s ease-in-out infinite;
+}
+.login-bg .orb-1 { width: 400px; height: 400px; background: var(--accent-cyan); top: -100px; right: -100px; animation-delay: 0s; }
+.login-bg .orb-2 { width: 350px; height: 350px; background: var(--accent-purple); bottom: -100px; left: -100px; animation-delay: 2s; }
+.login-bg .orb-3 { width: 200px; height: 200px; background: var(--accent-pink); top: 50%; left: 50%; animation-delay: 4s; }
+.login-bg .grid-lines {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Login Card */
+.login-card {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 420px;
+  padding: 2.5rem;
+  background: rgba(12,12,36,0.8);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  animation: fadeIn 0.8s ease-out;
+}
+
+.login-logo {
+  text-align: center; margin-bottom: 2rem;
+}
+.login-logo .logo-icon {
+  width: 64px; height: 64px; margin: 0 auto 1rem;
+  background: var(--gradient-1); border-radius: var(--radius-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.75rem; color: #fff;
+  box-shadow: var(--shadow-glow-cyan);
+  animation: glow 3s infinite;
+}
+.login-logo h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.login-logo p { font-size: 0.875rem; color: var(--text-secondary); }
+
+.login-form .input-group { margin-bottom: 1.25rem; }
+.login-form .input-icon {
+  position: relative;
+}
+.login-form .input-icon .icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 1rem; pointer-events: none;
+}
+.login-form .input-icon .input {
+  padding-left: 42px;
+}
+
+.login-form .btn-primary {
+  width: 100%; padding: 14px; font-size: 1rem; font-weight: 600;
+  justify-content: center; margin-top: 0.5rem;
+}
+.login-form .btn-primary:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none !important;
+}
+
+.login-error {
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 1rem;
+  font-size: 0.813rem; color: var(--accent-red);
+  display: none; align-items: center; gap: 8px;
+}
+.login-error.visible { display: flex; animation: fadeIn 0.3s ease-out; }
+
+.login-footer {
+  text-align: center; margin-top: 1.5rem;
+  font-size: 0.75rem; color: var(--text-muted);
+}
+
+/* Shake animation for error */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.shake { animation: shake 0.4s ease-in-out; }

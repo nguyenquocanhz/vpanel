@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — Dashboard</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <button class="btn btn-icon btn-ghost hidden" id="menuBtn" onclick="toggleSidebar()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                </button>
+                <h2>Server Overview</h2>
+                <div class="server-status">
+                    <span class="status-dot online" id="serverDot"></span>
+                    <span id="serverHostname">Loading...</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="flex items-center gap-sm text-xs text-muted">
+                    <span class="ws-indicator" id="wsIndicator" title="WebSocket"></span>
+                    <span id="wsStatus">Connecting...</span>
+                </div>
+                <span class="badge badge-cyan" id="uptimeBadge">--</span>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <!-- Metric Cards -->
+            <div class="metrics-grid">
+                <div class="glass metric-card cyan animate-in delay-1" id="cpuCard">
+                    <div class="metric-header">
+                        <div><div class="metric-value" id="cpuValue">--%</div><div class="metric-label">CPU Usage</div></div>
+                        <div class="metric-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg></div>
+                    </div>
+                    <div class="metric-sub" id="cpuSub">-- cores • -- MHz</div>
+                    <div class="progress-bar"><div class="progress-fill cyan" id="cpuBar" style="width:0%"></div></div>
+                </div>
+                <div class="glass metric-card red animate-in delay-2" id="tempCard">
+                    <div class="metric-header">
+                        <div><div class="metric-value" id="tempValue">--°C</div><div class="metric-label">Temperature</div></div>
+                        <div class="metric-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg></div>
+                    </div>
+                    <div class="metric-sub"><span class="badge badge-green" id="tempBadge">Normal</span></div>
+                    <div class="progress-bar"><div class="progress-fill red" id="tempBar" style="width:0%"></div></div>
+                </div>
+                <div class="glass metric-card purple animate-in delay-3" id="ramCard">
+                    <div class="metric-header">
+                        <div><div class="metric-value" id="ramValue">--%</div><div class="metric-label">Memory Usage</div></div>
+                        <div class="metric-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19v-3"/><path d="M10 19v-3"/><path d="M14 19v-3"/><path d="M18 19v-3"/><path d="M8 11V9"/><path d="M16 11V9"/><path d="M12 11V9"/><path d="M2 15h20"/><path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1.1a2 2 0 0 0 0 3.837V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5.1a2 2 0 0 0 0-3.837Z"/></svg></div>
+                    </div>
+                    <div class="metric-sub" id="ramSub">-- / -- GB</div>
+                    <div class="progress-bar"><div class="progress-fill purple" id="ramBar" style="width:0%"></div></div>
+                </div>
+                <div class="glass metric-card green animate-in delay-4" id="diskCard">
+                    <div class="metric-header">
+                        <div><div class="metric-value" id="diskValue">--%</div><div class="metric-label">Disk Usage</div></div>
+                        <div class="metric-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></svg></div>
+                    </div>
+                    <div class="metric-sub" id="diskSub">-- / -- GB</div>
+                    <div class="progress-bar"><div class="progress-fill green" id="diskBar" style="width:0%"></div></div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="glass chart-card animate-in delay-3">
+                    <div class="chart-header">
+                        <div class="chart-title">CPU & Memory History</div>
+                        <span class="badge badge-cyan">Live</span>
+                    </div>
+                    <div class="chart-area"><canvas id="historyChart"></canvas></div>
+                </div>
+                <div class="glass chart-card animate-in delay-4">
+                    <div class="chart-header">
+                        <div class="chart-title">Network I/O</div>
+                        <span class="badge badge-purple">KB/s</span>
+                    </div>
+                    <div class="chart-area"><canvas id="networkChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Bottom -->
+            <div class="bottom-grid">
+                <div class="glass p-3 animate-in delay-5">
+                    <h3 style="margin-bottom:1rem;">Disk Partitions</h3>
+                    <div id="diskList"><div class="skeleton" style="height:120px;"></div></div>
+                </div>
+                <div class="glass process-card animate-in delay-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3>Top Processes</h3>
+                        <span class="text-xs text-muted" id="procCount">-- processes</span>
+                    </div>
+                    <div class="table-container">
+                        <table><thead><tr><th>Name</th><th>CPU</th><th>MEM</th><th>User</th></tr></thead>
+                        <tbody id="processTable"><tr><td colspan="4" class="skeleton" style="height:100px;"></td></tr></tbody></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Power Modal -->
+<div class="modal-overlay" id="powerModal">
+    <div class="modal">
+        <div class="modal-title flex items-center gap-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+            Power Control
+        </div>
+        <p class="text-sm text-muted mb-2">Choose an action. This cannot be undone.</p>
+        <div class="modal-actions" style="flex-direction:column;gap:10px;">
+            <button class="btn btn-primary w-full" onclick="serverAction('restart')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                Restart Server
+            </button>
+            <button class="btn btn-danger w-full" onclick="serverAction('shutdown')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><rect width="8" height="8" x="8" y="8"/></svg>
+                Shutdown Server
+            </button>
+            <button class="btn btn-ghost w-full" onclick="closePowerModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script src="/js/websocket.js"></script>
+<script src="/js/charts.js"></script>
+<script src="/js/monitor.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

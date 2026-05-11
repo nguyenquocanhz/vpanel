@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — AppStore</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <style>
+        .store-header { margin-bottom: 1.5rem; }
+        .store-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+        .store-header p { color: var(--text-muted); font-size: 0.875rem; }
+
+        .store-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .filter-btn {
+            padding: 6px 16px; border-radius: var(--radius-full);
+            background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+            color: var(--text-secondary); font-size: 0.813rem; cursor: pointer;
+            transition: var(--transition);
+        }
+        .filter-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+        .filter-btn.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.3); color: var(--accent-cyan); }
+        .filter-btn .count { margin-left: 4px; opacity: 0.5; }
+
+        .addons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+
+        .addon-card {
+            padding: 1.25rem; cursor: default;
+            display: flex; flex-direction: column; gap: 12px;
+            transition: var(--transition);
+        }
+        .addon-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
+
+        .addon-top { display: flex; align-items: flex-start; gap: 14px; }
+        .addon-icon {
+            width: 48px; height: 48px; border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 1.25rem;
+        }
+        .addon-icon.web-server { background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05)); color: var(--accent-cyan); }
+        .addon-icon.database { background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(124,58,237,0.05)); color: var(--accent-purple); }
+        .addon-icon.container { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05)); color: #3b82f6; }
+        .addon-icon.runtime { background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); color: var(--accent-green); }
+        .addon-icon.security { background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05)); color: var(--accent-red); }
+        .addon-icon.tools { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); color: var(--accent-amber); }
+
+        .addon-info { flex: 1; min-width: 0; }
+        .addon-name { font-size: 0.938rem; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 8px; }
+        .addon-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+
+        .addon-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+        .addon-tag {
+            font-size: 0.625rem; padding: 2px 8px; border-radius: var(--radius-full);
+            background: rgba(255,255,255,0.04); color: var(--text-muted);
+        }
+
+        .addon-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04); }
+        .addon-status { font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
+        .addon-status .dot { width: 7px; height: 7px; border-radius: 50%; }
+        .dot.active { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+        .dot.inactive { background: var(--accent-amber); }
+        .dot.not-installed { background: var(--text-muted); opacity: 0.3; }
+
+        .addon-actions { display: flex; gap: 6px; }
+
+        /* Install modal */
+        .install-log {
+            background: rgba(0,0,0,0.4); border-radius: var(--radius-md);
+            padding: 12px; margin-top: 12px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.688rem; color: var(--text-muted); max-height: 150px;
+            overflow-y: auto; white-space: pre-wrap; display: none;
+        }
+        .install-log.visible { display: block; }
+
+        @media (max-width: 768px) { .addons-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h2 class="flex items-center gap-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                    AppStore
+                </h2>
+            </div>
+            <div class="header-right">
+                <input type="text" class="input" id="searchInput" placeholder="Search addons..." style="width:220px;padding:8px 14px;font-size:0.813rem;" oninput="filterAddons()">
+                <button class="btn btn-primary btn-sm" onclick="loadAddons()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    Refresh
+                </button>
+            </div>
+        </header>
+        <div class="page-content">
+            <div class="store-header animate-in">
+                <p>Install popular software packages on your server with one click.</p>
+            </div>
+
+            <div class="store-filters animate-in delay-1" id="filterBar">
+                <button class="filter-btn active" data-cat="all" onclick="setFilter('all')">All</button>
+            </div>
+
+            <div class="addons-grid" id="addonsGrid">
+                <div class="glass p-3 skeleton" style="height:180px"></div>
+                <div class="glass p-3 skeleton" style="height:180px"></div>
+                <div class="glass p-3 skeleton" style="height:180px"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Install Confirm Modal -->
+<div class="modal-overlay" id="installModal">
+    <div class="modal">
+        <div class="modal-title" id="modalTitle">Install Package</div>
+        <p class="text-sm text-muted" id="modalDesc">Are you sure you want to install this package?</p>
+        <div class="install-log" id="installLog"></div>
+        <div class="modal-actions" id="modalActions">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" id="modalConfirmBtn" onclick="confirmAction()">Install</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+/* ── Lucide icon map (inline SVGs) ── */
+const ICONS = {
+    globe: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+    container: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="14" rx="2"/><rect width="20" height="8" x="2" y="2" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>',
+    database: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
+    zap: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+    hexagon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+    code: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+    shield: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>',
+    'shield-alert': '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+    flame: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    'layout-dashboard': '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>',
+    ship: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4"/><path d="M12 2v3"/></svg>',
+};
+
+const CAT_ICON_CLASS = { 'Web Server': 'web-server', 'Database': 'database', 'Container': 'container', 'Runtime': 'runtime', 'Security': 'security', 'Tools': 'tools' };
+
+let allAddons = [], activeFilter = 'all', pendingAction = null;
+
+function showToast(m, t='success') {
+    const c = document.getElementById('toastContainer'); if (!c) return;
+    const d = document.createElement('div'); d.className = 'toast ' + t;
+    d.innerHTML = `<span>${t==='error'?'❌':'✅'}</span><span>${m}</span>`;
+    c.appendChild(d); setTimeout(() => d.remove(), 4000);
+}
+
+async function loadAddons() {
+    try {
+        const r = await Auth.apiFetch('/api/appstore/addons');
+        if (!r) return;
+        const data = await r.json();
+        allAddons = data.addons || [];
+        renderFilters(data.categories || []);
+        renderAddons(allAddons);
+    } catch (e) {
+        document.getElementById('addonsGrid').innerHTML = '<div class="glass p-3 text-muted">Failed to load: ' + e.message + '</div>';
+    }
+}
+
+function renderFilters(categories) {
+    const bar = document.getElementById('filterBar');
+    const total = allAddons.length;
+    bar.innerHTML = `<button class="filter-btn ${activeFilter==='all'?'active':''}" data-cat="all" onclick="setFilter('all')">All<span class="count">${total}</span></button>` +
+        categories.map(c => `<button class="filter-btn ${activeFilter===c.name?'active':''}" data-cat="${c.name}" onclick="setFilter('${c.name}')">${c.name}<span class="count">${c.count}</span></button>`).join('');
+}
+
+function setFilter(cat) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+    filterAddons();
+}
+
+function filterAddons() {
+    const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    let filtered = allAddons;
+    if (activeFilter !== 'all') filtered = filtered.filter(a => a.category === activeFilter);
+    if (q) filtered = filtered.filter(a => (a.name + ' ' + a.description + ' ' + a.tags.join(' ')).toLowerCase().includes(q));
+    renderAddons(filtered);
+}
+
+function renderAddons(addons) {
+    const grid = document.getElementById('addonsGrid');
+    if (!addons.length) { grid.innerHTML = '<div class="glass p-3 text-muted">No addons found</div>'; return; }
+    grid.innerHTML = addons.map((a, i) => {
+        const iconClass = CAT_ICON_CLASS[a.category] || 'tools';
+        const iconSvg = ICONS[a.icon] || ICONS.hexagon;
+        const dotClass = a.installed ? (a.service_status === 'active' ? 'active' : 'inactive') : 'not-installed';
+        const statusText = a.installed ? (a.service_status === 'active' ? 'Running' : (a.has_service ? 'Stopped' : 'Installed')) : 'Not installed';
+        const delay = Math.min(i + 1, 6);
+        return `<div class="glass addon-card animate-in delay-${delay}">
+            <div class="addon-top">
+                <div class="addon-icon ${iconClass}">${iconSvg}</div>
+                <div class="addon-info">
+                    <div class="addon-name">${a.name} <span class="badge badge-${a.installed?'green':'cyan'}" style="font-size:0.625rem">${a.category}</span></div>
+                    <div class="addon-desc">${a.description}</div>
+                </div>
+            </div>
+            <div class="addon-tags">${a.tags.map(t=>`<span class="addon-tag">${t}</span>`).join('')}</div>
+            <div class="addon-footer">
+                <div class="addon-status"><span class="dot ${dotClass}"></span><span class="text-xs ${a.installed&&a.service_status==='active'?'text-gradient':''}">${statusText}</span></div>
+                <div class="addon-actions">
+                    ${a.installed
+                        ? `<button class="btn btn-sm btn-ghost" style="color:var(--accent-red)" onclick="showAction('uninstall','${a.id}','${a.name}')">Uninstall</button>`
+                        : `<button class="btn btn-sm btn-primary" onclick="showAction('install','${a.id}','${a.name}')">Install</button>`}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function showAction(action, id, name) {
+    pendingAction = { action, id, name };
+    const modal = document.getElementById('installModal');
+    document.getElementById('modalTitle').textContent = (action === 'install' ? '📦 Install ' : '🗑️ Uninstall ') + name;
+    document.getElementById('modalDesc').textContent = action === 'install'
+        ? `This will install ${name} on your server. The process may take a few minutes.`
+        : `This will remove ${name} from your server. Data may be lost.`;
+    document.getElementById('modalConfirmBtn').textContent = action === 'install' ? 'Install' : 'Uninstall';
+    document.getElementById('modalConfirmBtn').className = 'btn ' + (action === 'install' ? 'btn-primary' : 'btn-danger');
+    document.getElementById('installLog').classList.remove('visible');
+    document.getElementById('installLog').textContent = '';
+    modal.classList.add('active');
+}
+
+async function confirmAction() {
+    if (!pendingAction) return;
+    const { action, id, name } = pendingAction;
+    const btn = document.getElementById('modalConfirmBtn');
+    const log = document.getElementById('installLog');
+    btn.disabled = true;
+    btn.textContent = action === 'install' ? 'Installing...' : 'Uninstalling...';
+    log.classList.add('visible');
+    log.textContent = `[${new Date().toLocaleTimeString()}] Starting ${action} of ${name}...\n`;
+
+    try {
+        const r = await Auth.apiFetch(`/api/appstore/${action}`, {
+            method: 'POST',
+            body: JSON.stringify({ addon_id: id })
+        });
+        const data = await r.json();
+        if (data.success) {
+            log.textContent += `[${new Date().toLocaleTimeString()}] ✅ ${data.message}\n`;
+            if (data.output) log.textContent += data.output + '\n';
+            showToast(data.message);
+            setTimeout(() => { closeModal(); loadAddons(); }, 1500);
+        } else {
+            log.textContent += `[${new Date().toLocaleTimeString()}] ❌ ${data.error}\n`;
+            if (data.output) log.textContent += data.output + '\n';
+            showToast(data.error, 'error');
+            btn.disabled = false;
+            btn.textContent = action === 'install' ? 'Retry' : 'Retry';
+        }
+    } catch (e) {
+        log.textContent += `[${new Date().toLocaleTimeString()}] ❌ ${e.message}\n`;
+        showToast(e.message, 'error');
+        btn.disabled = false;
+    }
+}
+
+function closeModal() {
+    document.getElementById('installModal')?.classList.remove('active');
+    pendingAction = null;
+}
+
+document.getElementById('installModal')?.addEventListener('click', e => {
+    if (e.target.classList.contains('modal-overlay')) closeModal();
+});
+
+document.addEventListener('DOMContentLoaded', loadAddons);
+</script>
+</body>
+</html>

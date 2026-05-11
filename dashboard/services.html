@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — Services</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h2 class="flex items-center gap-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Systemd Services
+                </h2>
+            </div>
+            <div class="header-right">
+                <input type="text" class="input" id="svcSearch" placeholder="Search services..." style="width:220px;padding:8px 14px;font-size:0.813rem;" oninput="filterServices()">
+                <button class="btn btn-primary btn-sm" onclick="loadServices()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    Refresh
+                </button>
+            </div>
+        </header>
+        <div class="page-content">
+            <div class="glass p-3 animate-in">
+                <div class="table-container"><table>
+                    <thead><tr><th>Service</th><th>Status</th><th>Sub</th><th>Description</th><th>Actions</th></tr></thead>
+                    <tbody id="svcTable"><tr><td colspan="5"><div class="skeleton" style="height:200px"></div></td></tr></tbody>
+                </table></div>
+            </div>
+        </div>
+    </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+let allServices=[];
+function showToast(m,t='success'){const c=document.getElementById('toastContainer');if(!c)return;const d=document.createElement('div');d.className='toast '+t;d.innerHTML=`<span>${t==='error'?'❌':'✅'}</span><span>${m}</span>`;c.appendChild(d);setTimeout(()=>d.remove(),4000);}
+
+async function loadServices(){
+    try{const r=await Auth.apiFetch('/api/manager/services');if(!r)return;
+    const d=await r.json();allServices=d.services||[];renderServices(allServices);}catch(e){document.getElementById('svcTable').innerHTML='<tr><td colspan="5" class="text-muted">Failed: '+e.message+'</td></tr>';}
+}
+
+function renderServices(list){
+    const tb=document.getElementById('svcTable');
+    tb.innerHTML=list.map(s=>{
+        const isActive=s.active==='active';
+        return `<tr>
+            <td class="truncate" style="max-width:200px;font-weight:500">${s.name}</td>
+            <td><span class="badge ${isActive?'badge-green':'badge-red'}">${isActive?'Active':'Inactive'}</span></td>
+            <td class="text-xs text-muted">${s.sub||'--'}</td>
+            <td class="text-xs text-muted truncate" style="max-width:250px">${s.description||'--'}</td>
+            <td><div class="flex gap-sm">
+                ${isActive?`<button class="btn btn-sm btn-ghost" onclick="svcAction('${s.name}','restart')">Restart</button><button class="btn btn-sm btn-ghost" style="color:var(--accent-red)" onclick="svcAction('${s.name}','stop')">Stop</button>`
+                :`<button class="btn btn-sm btn-primary" onclick="svcAction('${s.name}','start')">Start</button>`}
+            </div></td></tr>`;
+    }).join('')||'<tr><td colspan="5" class="text-muted">No services</td></tr>';
+}
+
+function filterServices(){const q=document.getElementById('svcSearch').value.toLowerCase();
+    renderServices(allServices.filter(s=>(s.name+' '+s.description).toLowerCase().includes(q)));}
+
+async function svcAction(name,action){
+    try{const r=await Auth.apiFetch(`/api/manager/service/${name}/${action}`,{method:'POST'});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');loadServices();}catch(e){showToast(e.message,'error');}
+}
+
+document.addEventListener('DOMContentLoaded',loadServices);
+</script>
+</body>
+</html>
