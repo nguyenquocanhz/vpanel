@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — File Manager</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="/css/filemanager.css">
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h2 class="flex items-center gap-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                    File Manager
+                </h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-ghost btn-sm" onclick="toggleUpload()">Upload</button>
+                <button class="btn btn-ghost btn-sm" onclick="promptNewFolder()">New Folder</button>
+                <button class="btn btn-primary btn-sm" onclick="navigate(currentPath)">Refresh</button>
+            </div>
+        </header>
+        <div class="page-content">
+            <div class="glass p-3 animate-in">
+                <div class="fm-toolbar">
+                    <button class="btn btn-ghost btn-sm" onclick="goUp()">← Back</button>
+                    <div class="breadcrumb" id="breadcrumb"></div>
+                </div>
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <p class="text-sm text-muted">Drop files here or click to upload</p>
+                    <input type="file" id="fileInput" multiple hidden onchange="uploadFiles(this.files)">
+                </div>
+                <div class="file-grid" id="fileGrid"></div>
+            </div>
+        </div>
+    </main>
+</div>
+<div class="editor-overlay" id="editorOverlay">
+    <div class="editor-panel">
+        <div class="editor-header">
+            <h3 id="editorTitle">Edit</h3>
+            <div class="flex gap-sm"><button class="btn btn-primary btn-sm" onclick="saveFile()">Save</button><button class="btn btn-ghost btn-sm" onclick="closeEditor()">Close</button></div>
+        </div>
+        <div class="editor-body"><textarea id="editorContent" spellcheck="false"></textarea></div>
+    </div>
+</div>
+<div class="ctx-menu" id="ctxMenu">
+    <div class="ctx-item" onclick="ctxOpen()">Open</div>
+    <div class="ctx-item" onclick="ctxEdit()">Edit</div>
+    <div class="ctx-item" onclick="ctxRename()">Rename</div>
+    <div class="ctx-item danger" onclick="ctxDelete()">Delete</div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script src="/js/filemanager.js"></script>
+</body>
+</html>

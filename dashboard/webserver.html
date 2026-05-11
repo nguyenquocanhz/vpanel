@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Panel — Web Server</title>
+    <link rel="stylesheet" href="/css/morphe.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <style>
+        .nginx-status{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.5rem}
+        .status-item{display:flex;align-items:center;gap:8px;font-size:.813rem}
+        .site-card{padding:1rem;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;border-radius:var(--radius-md);background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);transition:var(--transition)}
+        .site-card:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08)}
+        .site-info h4{font-size:.875rem;font-weight:600;margin-bottom:2px}
+        .site-info p{font-size:.75rem;color:var(--text-muted)}
+        .config-editor textarea{width:100%;min-height:350px;background:rgba(0,0,0,.3);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:16px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-primary);line-height:1.6;resize:vertical}
+        .config-editor textarea:focus{outline:none;border-color:rgba(0,212,255,.3)}
+    </style>
+</head>
+<body>
+<div class="dashboard-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h2 class="flex items-center gap-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    Web Server (Nginx)
+                </h2>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-ghost btn-sm" onclick="testConfig()">Test Config</button>
+                <button class="btn btn-ghost btn-sm" onclick="reloadNginx()">Reload</button>
+                <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ New Site</button>
+            </div>
+        </header>
+        <div class="page-content">
+            <div class="nginx-status animate-in" id="nginxStatus">
+                <div class="status-item"><span class="status-dot" id="nginxDot"></span><span id="nginxVer">Nginx --</span></div>
+            </div>
+            <div class="glass p-3 animate-in delay-1">
+                <h3 style="margin-bottom:1rem">Virtual Hosts</h3>
+                <div id="sitesList"><div class="skeleton" style="height:120px"></div></div>
+            </div>
+            <div class="glass p-3 animate-in delay-2" id="configPanel" style="display:none;margin-top:1rem">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 id="configTitle">Edit Config</h3>
+                    <div class="flex gap-sm">
+                        <button class="btn btn-primary btn-sm" onclick="saveConfig()">Save</button>
+                        <button class="btn btn-ghost btn-sm" onclick="closeConfig()">Close</button>
+                    </div>
+                </div>
+                <div class="config-editor"><textarea id="configContent" spellcheck="false"></textarea></div>
+            </div>
+        </div>
+    </main>
+</div>
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <div class="modal-title">Create Virtual Host</div>
+        <div class="input-group"><label>Domain</label><input class="input" id="newDomain" placeholder="example.com"></div>
+        <div class="input-group"><label>Web Root (optional)</label><input class="input" id="newRoot" placeholder="/var/www/example.com"></div>
+        <div class="input-group"><label>Template</label>
+            <select class="input" id="newTemplate"><option value="static">Static HTML</option><option value="php">PHP (FastCGI)</option><option value="proxy">Reverse Proxy</option></select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeCreateModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="createSite()">Create</button>
+        </div>
+    </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/sidebar.js"></script>
+<script>
+let editingSite='';
+function showToast(m,t='success'){const c=document.getElementById('toastContainer');if(!c)return;const d=document.createElement('div');d.className='toast '+t;d.textContent=m;c.appendChild(d);setTimeout(()=>d.remove(),3500);}
+
+async function loadStatus(){
+    try{const r=await Auth.apiFetch('/api/webserver/status');if(!r)return;const d=await r.json();
+    const dot=document.getElementById('nginxDot');
+    dot.classList.toggle('online',d.active);dot.classList.toggle('offline',!d.active);
+    document.getElementById('nginxVer').textContent=d.installed?`Nginx ${d.version} • ${d.active?'Active':'Inactive'}`:'Nginx not installed';
+    }catch(e){}
+}
+
+async function loadSites(){
+    try{const r=await Auth.apiFetch('/api/webserver/sites');if(!r)return;const d=await r.json();
+    const list=document.getElementById('sitesList');
+    if(!d.sites||!d.sites.length){list.innerHTML='<p class="text-muted text-sm">No sites configured. Install Nginx first.</p>';return;}
+    list.innerHTML=d.sites.map(s=>`<div class="site-card">
+        <div class="site-info">
+            <h4>${s.name} ${s.has_ssl?'🔒':''}</h4>
+            <p>${s.server_name} • :${s.listen} • ${s.root}</p>
+        </div>
+        <div class="flex gap-sm items-center">
+            <span class="badge ${s.enabled?'badge-green':'badge-red'}">${s.enabled?'Enabled':'Disabled'}</span>
+            <button class="btn btn-sm btn-ghost" onclick="editSite('${s.name}')">Edit</button>
+            ${s.enabled
+                ?`<button class="btn btn-sm btn-ghost" onclick="toggleSite('${s.name}','disable')">Disable</button>`
+                :`<button class="btn btn-sm btn-ghost" onclick="toggleSite('${s.name}','enable')">Enable</button>`}
+            <button class="btn btn-sm btn-ghost" style="color:var(--accent-red)" onclick="deleteSite('${s.name}')">Delete</button>
+        </div>
+    </div>`).join('');
+    }catch(e){document.getElementById('sitesList').innerHTML='<p class="text-muted">'+e.message+'</p>';}
+}
+
+async function editSite(name){
+    try{const r=await Auth.apiFetch('/api/webserver/site/'+encodeURIComponent(name));const d=await r.json();
+    if(!d.success){showToast(d.error,'error');return;}
+    editingSite=name;document.getElementById('configTitle').textContent='Edit: '+name;
+    document.getElementById('configContent').value=d.content;document.getElementById('configPanel').style.display='block';
+    document.getElementById('configPanel').scrollIntoView({behavior:'smooth'});
+    }catch(e){showToast(e.message,'error');}
+}
+
+async function saveConfig(){
+    const content=document.getElementById('configContent').value;
+    try{const r=await Auth.apiFetch('/api/webserver/site/save',{method:'POST',body:JSON.stringify({site_name:editingSite,content})});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');
+    }catch(e){showToast(e.message,'error');}
+}
+
+function closeConfig(){document.getElementById('configPanel').style.display='none';editingSite='';}
+
+async function toggleSite(name,action){
+    try{const r=await Auth.apiFetch('/api/webserver/site/'+action,{method:'POST',body:JSON.stringify({site_name:name})});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');loadSites();
+    }catch(e){showToast(e.message,'error');}
+}
+
+async function deleteSite(name){if(!confirm('Delete site '+name+'?'))return;
+    try{const r=await Auth.apiFetch('/api/webserver/site/delete',{method:'POST',body:JSON.stringify({site_name:name})});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');loadSites();
+    }catch(e){showToast(e.message,'error');}
+}
+
+async function testConfig(){
+    try{const r=await Auth.apiFetch('/api/webserver/test');const d=await r.json();
+    showToast(d.success?'Config OK ✓':d.output,d.success?'success':'error');
+    }catch(e){showToast(e.message,'error');}
+}
+
+async function reloadNginx(){
+    try{const r=await Auth.apiFetch('/api/webserver/reload',{method:'POST'});const d=await r.json();
+    showToast(d.message||d.error,d.success?'success':'error');loadStatus();
+    }catch(e){showToast(e.message,'error');}
+}
+
+function showCreateModal(){document.getElementById('createModal').classList.add('active');}
+function closeCreateModal(){document.getElementById('createModal').classList.remove('active');}
+
+async function createSite(){
+    const domain=document.getElementById('newDomain').value.trim();
+    const root_path=document.getElementById('newRoot').value.trim()||null;
+    const template=document.getElementById('newTemplate').value;
+    if(!domain){showToast('Domain required','error');return;}
+    try{const r=await Auth.apiFetch('/api/webserver/site/create',{method:'POST',body:JSON.stringify({domain,root_path,template})});
+    const d=await r.json();showToast(d.message||d.error,d.success?'success':'error');
+    if(d.success){closeCreateModal();loadSites();}
+    }catch(e){showToast(e.message,'error');}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{loadStatus();loadSites();});
+</script>
+</body>
+</html>

@@ -24,6 +24,8 @@ from agent.routes.manager_routes import router as manager_router
 from agent.routes.websocket_routes import router as websocket_router
 from agent.routes.license_routes import router as license_router
 from agent.routes.appstore_routes import router as appstore_router
+from agent.routes.filemanager_routes import router as filemanager_router
+from agent.routes.webserver_routes import router as webserver_router
 
 
 @asynccontextmanager
@@ -112,6 +114,8 @@ app.include_router(manager_router)
 app.include_router(websocket_router)
 app.include_router(license_router)
 app.include_router(appstore_router)
+app.include_router(filemanager_router)
+app.include_router(webserver_router)
 
 # ──────────────────────────────────────────────────
 #  Static Files & Frontend Serving
@@ -171,6 +175,24 @@ async def serve_appstore():
     if store_path.exists():
         return FileResponse(str(store_path))
     return JSONResponse({"error": "AppStore not found"}, status_code=404)
+
+
+@app.get("/filemanager", include_in_schema=False)
+async def serve_filemanager():
+    """Serve the File Manager page."""
+    fm_path = DASHBOARD_DIR / "filemanager.html"
+    if fm_path.exists():
+        return FileResponse(str(fm_path))
+    return JSONResponse({"error": "File Manager not found"}, status_code=404)
+
+
+@app.get("/webserver", include_in_schema=False)
+async def serve_webserver():
+    """Serve the Web Server manager page."""
+    ws_path = DASHBOARD_DIR / "webserver.html"
+    if ws_path.exists():
+        return FileResponse(str(ws_path))
+    return JSONResponse({"error": "Web Server manager not found"}, status_code=404)
 
 
 # ──────────────────────────────────────────────────
