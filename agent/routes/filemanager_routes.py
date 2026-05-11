@@ -11,7 +11,7 @@ from typing import Optional
 from agent.auth.auth_middleware import get_current_user
 from agent.manager.filemanager import (
     list_directory, read_file, write_file, create_directory,
-    delete_item, rename_item, get_file_download_path
+    delete_item, rename_item, get_file_download_path, chmod_item
 )
 
 router = APIRouter(
@@ -37,6 +37,11 @@ class DeleteRequest(BaseModel):
 class RenameRequest(BaseModel):
     path: str
     new_name: str
+
+
+class ChmodRequest(BaseModel):
+    path: str
+    mode: str
 
 
 @router.get("/list")
@@ -95,3 +100,9 @@ async def api_upload(
         return {"success": True, "message": f"Uploaded: {file.filename}", "path": str(target), "size": len(content)}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@router.post("/chmod")
+async def api_chmod(req: ChmodRequest):
+    return chmod_item(req.path, req.mode)
+

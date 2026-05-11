@@ -191,3 +191,23 @@ def get_file_download_path(path: str) -> Optional[str]:
     if target.exists() and target.is_file():
         return str(target.resolve())
     return None
+
+
+def chmod_item(path: str, mode: str) -> dict:
+    """Change file/directory permissions (e.g. '755', '644')."""
+    if not _is_safe_path(path):
+        return {"success": False, "error": "Access denied"}
+
+    target = Path(path)
+    if not target.exists():
+        return {"success": False, "error": "Not found"}
+
+    try:
+        octal_mode = int(mode, 8)
+        os.chmod(str(target), octal_mode)
+        new_perms = stat.filemode(os.stat(str(target)).st_mode)
+        return {"success": True, "message": f"Permissions set to {mode} ({new_perms})", "permissions": new_perms}
+    except ValueError:
+        return {"success": False, "error": f"Invalid mode: {mode}. Use octal like 755, 644"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
